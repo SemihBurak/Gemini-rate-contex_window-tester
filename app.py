@@ -16,6 +16,7 @@ load_dotenv()
 # ── Configuration ────────────────────────────────────────────
 AVAILABLE_MODELS = [
     "gemma-3-1b-it",
+    "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
 ]
 
