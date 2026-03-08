@@ -114,7 +114,6 @@ def get_all_models():
         })
     return models
 
-
 # ── Error display helper ──────────────────────────────────────
 def show_rate_limit_error(error):
     """Parse rate limit error and show a user-friendly message with expandable details."""
@@ -155,7 +154,7 @@ def show_rate_limit_error(error):
     )
 
     with st.expander("Show full error details"):
-        st.code(err_str, language="text")
+        st.code(err_str)
 
 
 # ── Retry wrapper ─────────────────────────────────────────────
@@ -203,7 +202,11 @@ with st.sidebar:
 
     # Fetch and display model info
     info = get_model_info(selected_model)
-    context_limit = info["input_token_limit"]
+
+    if "gemma" in selected_model:
+        context_limit = 15_000
+    else:
+        context_limit = 250_000
 
     st.markdown("---")
     st.subheader("Model Info")
@@ -211,12 +214,7 @@ with st.sidebar:
     st.text(f"Display Name:  {info['display_name']}")
     st.text(f"Input Limit:   {info['input_token_limit']:,}")
     st.text(f"Output Limit:  {info['output_token_limit']:,}")
-
-    if "gemma" in selected_model:
-        context_limit = 15_000
-    else:
-        context_limit = 250_000
-
+   
     st.markdown("---")
     st.subheader("Context Window Limit (Actually it is TPM)")
     
@@ -276,14 +274,16 @@ with tab_text:
                 usage = response.usage_metadata
                 prompt_tokens = usage.prompt_token_count or 0
                 response_tokens = usage.candidates_token_count or 0
+                thoughts_tokens = usage.thoughts_token_count or 0
                 total_tokens = usage.total_token_count or 0
                 # total_tokens = prompt_tokens + response_tokens
                 log.empty()
 
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 col1.metric("Prompt Tokens", prompt_tokens)
                 col2.metric("Response Tokens", response_tokens)
-                col3.metric("Total Tokens", total_tokens)
+                col3.metric("Thoughts Tokens", thoughts_tokens)
+                col4.metric("Total Tokens", total_tokens)
 
                 show_context_status(total_tokens, context_limit)
 
@@ -308,16 +308,19 @@ with tab_chat:
         st.session_state.chat_model = selected_model
         st.session_state.chat_display = []
         st.session_state.chat_tokens = 0
+        st.session_state.chat_thoughts_tokens = 0
     if "chat_display" not in st.session_state:
         st.session_state.chat_display = []
     if "chat_tokens" not in st.session_state:
         st.session_state.chat_tokens = 0
+    if "chat_thoughts_tokens" not in st.session_state:
+        st.session_state.chat_thoughts_tokens = 0
 
     if st.button("Clear Conversation", key="clear_chat"):
         st.session_state.chat_session = client.chats.create(model=selected_model)
         st.session_state.chat_display = []
         st.session_state.chat_tokens = 0
-        st.rerun()
+        st.session_state.chat_thoughts_tokens = 0
 
     # Example prompts for chat
     st.markdown("**Example Prompts**")
@@ -343,6 +346,9 @@ with tab_chat:
 
     # Token bar
     if st.session_state.chat_tokens > 0:
+        col1, col2 = st.columns(2)
+        col1.metric("Total Tokens", st.session_state.chat_tokens)
+        col2.metric("Thoughts Tokens", st.session_state.chat_thoughts_tokens)
         show_context_status(st.session_state.chat_tokens, context_limit)
 
     # Helper to send a message via the chat session
@@ -362,6 +368,7 @@ with tab_chat:
             reply = response.text
             usage = response.usage_metadata
             st.session_state.chat_tokens += usage.total_token_count or 0
+            st.session_state.chat_thoughts_tokens += usage.thoughts_token_count or 0
             st.session_state.chat_display.append(("assistant", reply))
 
             # # Debug: print chat history from API
