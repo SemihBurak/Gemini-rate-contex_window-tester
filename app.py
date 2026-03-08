@@ -16,7 +16,7 @@ load_dotenv()
 # ── Configuration ────────────────────────────────────────────
 AVAILABLE_MODELS = [
     "gemma-3-1b-it",
-    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
 ]
 
 WARNING_THRESHOLD = 0.60
@@ -72,6 +72,7 @@ EXAMPLE_PROMPTS = {
 
 
 # ── Page config ──────────────────────────────────────────────
+st.set_page_config(page_title="Gemini API Tester", layout="centered")
 st.title("Gemini API Tester")
 st.caption("Work@Home 2 — Rate Limits & Context Window Detection")
 
@@ -92,7 +93,6 @@ if client is None:
 
 
 # ── Fetch model info ─────────────────────────────────────────
-@st.cache_data(ttl=300)
 def get_model_info(model_name):
     model = client.models.get(model = model_name)
     return {
@@ -103,7 +103,6 @@ def get_model_info(model_name):
     }
 
 
-@st.cache_data(ttl=300)
 def get_all_models():
     models = []
     for model in client.models.list():
@@ -198,7 +197,7 @@ def show_context_status(used, limit):
 
 # ── Sidebar: Model selection ─────────────────────────────────
 with st.sidebar:
-    st.header("1. Choose Model")
+    st.header("Choose Model")
     selected_model = st.selectbox("Model", AVAILABLE_MODELS)
 
     # Fetch and display model info
@@ -218,7 +217,7 @@ with st.sidebar:
         context_limit = 250_000
 
     st.markdown("---")
-    st.subheader("Context Window Limit")
+    st.subheader("Context Window Limit (Actually it is TPM)")
     st.text(f"Limit:         {context_limit:,} tokens")
     st.text(f"Warning at:    {WARNING_THRESHOLD*100:.0f}% ({int(context_limit * WARNING_THRESHOLD):,} tokens)")
 
@@ -273,7 +272,7 @@ with tab_text:
                 prompt_tokens = usage.prompt_token_count or 0
                 response_tokens = usage.candidates_token_count or 0
                 total_tokens = usage.total_token_count or 0
-
+                # total_tokens = prompt_tokens + response_tokens
                 log.empty()
 
                 col1, col2, col3 = st.columns(3)
