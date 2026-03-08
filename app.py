@@ -218,8 +218,10 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("Context Window Limit (Actually it is TPM)")
+    WARNING_THRESHOLD = st.slider("Warning Threshold?", 0.0, 1.0, 0.6)
     st.text(f"Limit:         {context_limit:,} tokens")
     st.text(f"Warning at:    {WARNING_THRESHOLD*100:.0f}% ({int(context_limit * WARNING_THRESHOLD):,} tokens)")
+    
 
     st.markdown("---")
     if st.button("List All Models"):
